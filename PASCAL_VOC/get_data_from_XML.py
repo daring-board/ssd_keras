@@ -77,7 +77,9 @@ class XML_preprocessor(object):
             one_hot_vector[17] = 1
         elif name == 'train':
             one_hot_vector[18] = 1
-        elif name == 'tvmonitor':
+        # elif name == 'tvmonitor':
+        #     one_hot_vector[19] = 1
+        elif name == 'meteor':
             one_hot_vector[19] = 1
         else:
             print('unknown label: %s' %name)
@@ -85,7 +87,7 @@ class XML_preprocessor(object):
         return one_hot_vector
 
 ## example on how to use it
-# import pickle
-# data = XML_preprocessor('VOC2007/Annotations/').data
-# pickle.dump(data,open('VOC2007.p','wb'))
-
+import pickle
+#data = XML_preprocessor('../../VOCdevkit/VOC2007/Annotations/').data
+data = XML_preprocessor('../../dataset/Annotations/').data
+pickle.dump(data, open('mydataset_v2.pkl','wb'))
