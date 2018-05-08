@@ -1,7 +1,7 @@
 import keras
 import pickle
 from videotest import VideoTest
-
+import pandas as pd
 import sys
 sys.path.append("..")
 from ssd import SSD300 as SSD
@@ -23,9 +23,11 @@ vid_test = VideoTest(class_names, model, input_shape)
 
 # To test on webcam 0, remove the parameter (or change it to another number
 # to test on that webcam)
-#vid_test.run('path/to/your/video.mkv')
-# vid_test.run('../videos/708213662.mp4')
-# vid_test.run('../videos/722729280.mp4')
-# vid_test.run('../videos/792677823.mp4')
-# vid_test.run('../videos/348456619.mp4')
-vid_test.run('D://Develop/stair/train/000005.mpg', conf_thresh=0.85)
+df = pd.read_csv('./train_list.csv', header=None)
+with open('./ssd_result.csv', 'w') as f:
+    f.write('id, ret\n')
+    for row in df[: 200].iterrows():
+        print(row[1][0])
+        flags = vid_test.run('D://Develop/stair/train/%s'%row[1][0], conf_thresh=0.85)
+        f.write('%s, %s\n'%(row[1][0], ':'.join(map(str, flags))))
+#        break

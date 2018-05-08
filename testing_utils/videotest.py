@@ -100,11 +100,12 @@ class VideoTest(object):
         fps = "FPS: ??"
         prev_time = timer()
 
+        flag_list = []
         while True:
             retval, orig_image = vid.read()
             if not retval:
                 print("Done!")
-                return
+                return flag_list
 
             im_size = (self.input_shape[0], self.input_shape[1])
             resized = cv2.resize(orig_image, im_size)
@@ -145,23 +146,28 @@ class VideoTest(object):
                 top_xmax = det_xmax[top_indices]
                 top_ymax = det_ymax[top_indices]
 
-                for i in range(top_conf.shape[0]):
-                    xmin = int(round(top_xmin[i] * to_draw.shape[1]))
-                    ymin = int(round(top_ymin[i] * to_draw.shape[0]))
-                    xmax = int(round(top_xmax[i] * to_draw.shape[1]))
-                    ymax = int(round(top_ymax[i] * to_draw.shape[0]))
+                flag = 0
+                # for i in range(top_conf.shape[0]):
+                #     xmin = int(round(top_xmin[i] * to_draw.shape[1]))
+                #     ymin = int(round(top_ymin[i] * to_draw.shape[0]))
+                #     xmax = int(round(top_xmax[i] * to_draw.shape[1]))
+                #     ymax = int(round(top_ymax[i] * to_draw.shape[0]))
+                #
+                #     # Draw the box on top of the to_draw image
+                #     class_num = int(top_label_indices[i])
+                #     cv2.rectangle(to_draw, (xmin, ymin), (xmax, ymax),
+                #                   self.class_colors[class_num], 2)
+                #     text = self.class_names[class_num] + " " + ('%.2f' % top_conf[i])
+                #     flag += 1
+                #
+                #     text_top = (xmin, ymin-10)
+                #     text_bot = (xmin + 80, ymin + 5)
+                #     text_pos = (xmin + 5, ymin)
+                #     cv2.rectangle(to_draw, text_top, text_bot, self.class_colors[class_num], -1)
+                #     cv2.putText(to_draw, text, text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0,0,0), 1)
 
-                    # Draw the box on top of the to_draw image
-                    class_num = int(top_label_indices[i])
-                    cv2.rectangle(to_draw, (xmin, ymin), (xmax, ymax),
-                                  self.class_colors[class_num], 2)
-                    text = self.class_names[class_num] + " " + ('%.2f' % top_conf[i])
-
-                    text_top = (xmin, ymin-10)
-                    text_bot = (xmin + 80, ymin + 5)
-                    text_pos = (xmin + 5, ymin)
-                    cv2.rectangle(to_draw, text_top, text_bot, self.class_colors[class_num], -1)
-                    cv2.putText(to_draw, text, text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0,0,0), 1)
+                # flag_list.append(flag)
+                flag_list.append(top_conf.shape[0])
 
             # Calculate FPS
             # This computes FPS for everything, not just the model's execution
@@ -177,8 +183,8 @@ class VideoTest(object):
                 curr_fps = 0
 
             # Draw FPS in top left corner
-            cv2.rectangle(to_draw, (0,0), (50, 17), (255,255,255), -1)
-            cv2.putText(to_draw, fps, (3,10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0,0,0), 1)
-
-            cv2.imshow("SSD result", to_draw)
-            cv2.waitKey(10)
+            # cv2.rectangle(to_draw, (0,0), (50, 17), (255,255,255), -1)
+            # cv2.putText(to_draw, fps, (3,10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0,0,0), 1)
+            #
+            # cv2.imshow("SSD result", to_draw)
+            # cv2.waitKey(10)
