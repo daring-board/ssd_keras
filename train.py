@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 from random import shuffle
-from scipy.misc import imread
-from scipy.misc import imresize
 import tensorflow as tf
 
 from ssd import SSD300
@@ -18,23 +16,16 @@ from ssd_utils import BBoxUtility
 
 plt.rcParams['figure.figsize'] = (8, 8)
 plt.rcParams['image.interpolation'] = 'nearest'
-
 np.set_printoptions(suppress=True)
 
-# 21
-NUM_CLASSES = 21 #4
+NUM_CLASSES = 10
 input_shape = (300, 300, 3)
 
 priors = pickle.load(open('prior_boxes_ssd300.pkl', 'rb'))
 bbox_util = BBoxUtility(NUM_CLASSES, priors)
 
-# gt = pickle.load(open('gt_pascal.pkl', 'rb'))
-# gt = pickle.load(open('PASCAL_VOC/VOC2007.pkl', 'rb'))
-# gt = pickle.load(open('PASCAL_VOC/mydataset.pkl', 'rb'))
-gt = pickle.load(open('PASCAL_VOC/mydataset_v2.pkl', 'rb'))
-# path_prefix = '../VOCdevkit/VOC2007/JPEGImages/'
-# path_prefix = '../dataset_1/JPEGImages/'
-path_prefix = '../dataset/JPEGImages/'
+gt = pickle.load(open('./mydataset_v3.pkl', 'rb'))
+path_prefix = './dataset/JPEGImages/'
 
 keys = sorted(gt.keys())
 num_train = int(round(0.8 * len(keys)))
@@ -185,14 +176,13 @@ class Generator(object):
             targets = []
             for key in keys:
                 # img_path = self.path_prefix + key
-                img_path = self.path_prefix + key + '.png'
-                img = imread(img_path).astype('float32')
+                img_path = self.path_prefix + key + '.JPG'
+                img = cv2.imread(img_path).astype('float32')
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 y = self.gt[key].copy()
                 if train and self.do_crop:
                     img, y = self.random_sized_crop(img, y)
-                img = imresize(img, self.image_size).astype('float32')
-                # boxの位置は正規化されているから画像をリサイズしても
-                # 教師信号としては問題ない
+                img = cv2.resize(img, self.image_size).astype('float32')
                 if train:
                     shuffle(self.color_jitter)
                     for jitter in self.color_jitter:
@@ -203,10 +193,7 @@ class Generator(object):
                         img, y = self.horizontal_flip(img, y)
                     if self.vflip_prob > 0:
                         img, y = self.vertical_flip(img, y)
-                # 訓練データ生成時にbbox_utilを使っているのはここだけらしい
-                #print(y)
                 y = self.bbox_util.assign_boxes(y)
-                #print(y)
                 inputs.append(img)
                 targets.append(y)
                 if len(targets) == self.batch_size:
@@ -218,14 +205,15 @@ class Generator(object):
 
 gen = Generator(gt, bbox_util, 4, path_prefix,
                 train_keys, val_keys,
-                (input_shape[0], input_shape[1]), do_crop=False)
+                (input_shape[0], input_shape[1]),
+                do_crop=False, hflip_prob=0, vflip_prob=0)
 
 model = SSD300(input_shape, num_classes=NUM_CLASSES)
 model.load_weights('weights_SSD300.hdf5', by_name=True)
 
 freeze = ['input_1', 'conv1_1', 'conv1_2', 'pool1',
           'conv2_1', 'conv2_2', 'pool2',
-          'conv3_1', 'conv3_2', 'conv3_3', 'pool3']#,
+         'conv3_1', 'conv3_2', 'conv3_3', 'pool3']#,
 #           'conv4_1', 'conv4_2', 'conv4_3', 'pool4']
 
 for L in model.layers:
@@ -235,17 +223,29 @@ for L in model.layers:
 def schedule(epoch, decay=0.9):
     return base_lr * decay**(epoch)
 
-callbacks = [keras.callbacks.ModelCheckpoint('./checkpoints/weights.{epoch:02d}-{val_loss:.2f}.hdf5',
-                                             verbose=1,
-                                             save_weights_only=True),
-             keras.callbacks.LearningRateScheduler(schedule)]
-
-base_lr = 3e-4
+base_lr = 1e-2
 optim = keras.optimizers.Adam(lr=base_lr)
 model.compile(optimizer=optim,
               loss=MultiboxLoss(NUM_CLASSES, neg_pos_ratio=2.0).compute_loss)
 
 nb_epoch = 10
+callbacks = [
+            keras.callbacks.LearningRateScheduler(schedule)
+        ]
+
+history = model.fit_generator(gen.generate(True), gen.train_batches,
+                              nb_epoch, verbose=1,
+                              callbacks=callbacks,
+                              validation_data=gen.generate(False),
+                              nb_val_samples=gen.val_batches,
+                              nb_worker=1)
+
+nb_epoch = 30
+optim = keras.optimizers.RMSprop(lr=base_lr)
+callbacks = [
+            keras.callbacks.ModelCheckpoint('./checkpoints/weights.{epoch:02d}-{val_loss:.2f}.hdf5', verbose=1, save_weights_only=True),
+            keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, min_lr=1e-10, verbose=1),
+        ]
 history = model.fit_generator(gen.generate(True), gen.train_batches,
                               nb_epoch, verbose=1,
                               callbacks=callbacks,
@@ -256,10 +256,13 @@ history = model.fit_generator(gen.generate(True), gen.train_batches,
 inputs = []
 images = []
 # img_path = path_prefix + sorted(val_keys)[0]
-img_path = path_prefix + sorted(val_keys)[0] + '.png'
+img_path = path_prefix + sorted(val_keys)[0] + '.JPG'
 img = image.load_img(img_path, target_size=(300, 300))
 img = image.img_to_array(img)
-images.append(imread(img_path))
+
+tmp = cv2.imread(img_path)
+tmp = cv2.cvtColor(tmp, cv2.COLOR_BGR2RGB)
+images.append(tmp)
 inputs.append(img.copy())
 inputs = preprocess_input(np.array(inputs))
 

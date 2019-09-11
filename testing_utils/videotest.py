@@ -9,7 +9,6 @@ from keras.preprocessing import image
 import pickle
 import numpy as np
 from random import shuffle
-from scipy.misc import imread, imresize
 from timeit import default_timer as timer
 
 import sys, os
@@ -189,7 +188,7 @@ class VideoTest(object):
             cv2.imshow("SSD result", to_draw)
             cv2.waitKey(10)
 
-    def run_img(self, video_path = 0, start_frame = 0, conf_thresh = 0.6):
+    def run_img(self, img_path = 0, start_frame = 0, conf_thresh = 0.6):
         """ Runs the test on a video (or webcam)
 
         # Arguments
@@ -204,37 +203,14 @@ class VideoTest(object):
                      are not visualized.
 
         """
-
-        vid = cv2.VideoCapture(video_path)
-        if not vid.isOpened():
-            raise IOError(("Couldn't open video file or webcam. If you're "
-            "trying to open a webcam, make sure you video_path is an integer!"))
-
-        # Compute aspect ratio of video
-        # vidw = vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)
-        # vidh = vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
-        vidw = vid.get(3)
-        vidh = vid.get(4)
-        vidar = vidw/vidh
-
-        # Skip frames until reaching start_frame
-        if start_frame > 0:
-            # vid.set(cv2.cv.CV_CAP_PROP_POS_MSEC, start_frame)
-            vid.set(0, start_frame)
-
-        accum_time = 0
-        curr_fps = 0
-        fps = "FPS: ??"
-        prev_time = timer()
-
-        base_path = './img/'
-        d_list = os.listdir(base_path)
+        d_list = os.listdir(img_path)
 
         flag_list = []
         for f_name in d_list:
             print(f_name)
-            f_path = base_path + f_name
+            f_path = img_path + f_name
             orig_image = cv2.imread(f_path)
+            vidar = orig_image.shape[1] / orig_image.shape[0]
 
             im_size = (self.input_shape[0], self.input_shape[1])
             resized = cv2.resize(orig_image, im_size)
@@ -252,10 +228,9 @@ class VideoTest(object):
 
             y = self.model.predict(x)
 
-
             # This line creates a new TensorFlow device every time. Is there a
             # way to avoid that?
-            results = self.bbox_util.detection_out(y)
+            results = self.bbox_util.detection_out(y, background_label_id=9)
 
             if len(results) > 0 and len(results[0]) > 0:
                 # Interpret output, only one frame is used
@@ -298,23 +273,6 @@ class VideoTest(object):
                 # flag_list.append(flag)
                 flag_list.append(top_conf.shape[0])
 
-            # Calculate FPS
-            # This computes FPS for everything, not just the model's execution
-            # which may or may not be what you want
-            curr_time = timer()
-            exec_time = curr_time - prev_time
-            prev_time = curr_time
-            accum_time = accum_time + exec_time
-            curr_fps = curr_fps + 1
-            if accum_time > 1:
-                accum_time = accum_time - 1
-                fps = "FPS: " + str(curr_fps)
-                curr_fps = 0
-
-            # Draw FPS in top left corner
-            # cv2.rectangle(to_draw, (0,0), (50, 17), (255,255,255), -1)
-            # cv2.putText(to_draw, fps, (3,10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0,0,0), 1)
-
             cv2.imshow("SSD result", to_draw)
             cv2.imwrite("./result/ssd_%s"%f_name, to_draw)
-            cv2.waitKey(1000)
+            cv2.waitKey(500)

@@ -25,10 +25,10 @@ vid_test = VideoTest(class_names, model, input_shape)
 
 # To test on webcam 0, remove the parameter (or change it to another number
 # to test on that webcam)
-# vid_test.run(0)
+vid_test.run(0)
 #vid_test.run('../movie/play_tennis.mp4')
 #vid_test.run('../movie/VideoOfPeopleWalking.mp4')
-vid_test.run_img()
+# vid_test.run_img()
 # df = pd.read_csv('./train_list.csv', header=None)
 # with open('./ssd_result.csv', 'w') as f:
 #     f.write('id, ret\n')
